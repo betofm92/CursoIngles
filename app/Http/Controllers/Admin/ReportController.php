@@ -4,10 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ScheduleSlot;
+use Dompdf\Dompdf;
+use Dompdf\Options;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -260,72 +261,35 @@ class ReportController extends Controller
      */
     private function downloadPdf(array $headers, array $rows, string $fileName, array $scope, string $statusFilter): Response
     {
-        $lines = [
-            'Reporte semanal de horarios',
-            sprintf('Rango: %s', $scope['range']),
-            sprintf('Estado filtrado: %s', $this->statusOptions()[$statusFilter] ?? $statusFilter),
-            '',
-            implode(' | ', $headers),
+        $summary = [
+            'total_courses' => count($rows),
+            'total_enrolled' => collect($rows)->sum(fn (array $row): int => (int) ($row['Inscritos'] ?? 0)),
+            'unique_teachers' => collect($rows)->pluck('Profesor')->filter()->unique()->count(),
+            'unique_classrooms' => collect($rows)->pluck('Aula')->filter()->unique()->count(),
         ];
 
-        foreach ($rows as $row) {
-            $line = implode(' | ', array_map(fn ($value): string => (string) $value, array_values($row)));
-            $lines[] = Str::limit($line, 150, '...');
-        }
+        $html = view('admin.reports.pdf', [
+            'headers' => $headers,
+            'rows' => $rows,
+            'scope' => $scope,
+            'statusLabel' => $this->statusOptions()[$statusFilter] ?? $statusFilter,
+            'generatedAt' => Carbon::now()->format('Y-m-d H:i'),
+            'summary' => $summary,
+        ])->render();
 
-        if (count($rows) === 0) {
-            $lines[] = 'No hay registros para los filtros seleccionados.';
-        }
+        $options = new Options();
+        $options->set('isHtml5ParserEnabled', true);
+        $options->set('isRemoteEnabled', false);
 
-        $pdf = $this->buildSimplePdf($lines);
+        $pdf = new Dompdf($options);
+        $pdf->setPaper('A4', 'landscape');
+        $pdf->loadHtml($html, 'UTF-8');
+        $pdf->render();
 
-        return response($pdf, 200, [
+        return response($pdf->output(), 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => "attachment; filename=\"{$fileName}\"",
         ]);
-    }
-
-    /**
-     * @param array<int, string> $lines
-     */
-    private function buildSimplePdf(array $lines): string
-    {
-        $normalizedLines = collect($lines)
-            ->map(fn (string $line): string => Str::ascii($line))
-            ->values()
-            ->all();
-
-        $content = "BT\n/F1 10 Tf\n40 800 Td\n12 TL\n";
-        foreach ($normalizedLines as $line) {
-            $escaped = str_replace(['\\', '(', ')'], ['\\\\', '\\(', '\\)'], $line);
-            $content .= "({$escaped}) Tj\nT*\n";
-        }
-        $content .= "ET";
-
-        $objects = [];
-        $objects[] = '1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj';
-        $objects[] = '2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj';
-        $objects[] = '3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >> endobj';
-        $objects[] = '4 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj';
-        $objects[] = "5 0 obj << /Length ".strlen($content)." >> stream\n{$content}\nendstream endobj";
-
-        $pdf = "%PDF-1.4\n";
-        $offsets = [0];
-        foreach ($objects as $object) {
-            $offsets[] = strlen($pdf);
-            $pdf .= $object."\n";
-        }
-
-        $xrefOffset = strlen($pdf);
-        $pdf .= "xref\n0 ".(count($objects) + 1)."\n";
-        $pdf .= "0000000000 65535 f \n";
-        for ($i = 1; $i <= count($objects); $i++) {
-            $pdf .= sprintf("%010d 00000 n \n", $offsets[$i]);
-        }
-        $pdf .= "trailer << /Size ".(count($objects) + 1)." /Root 1 0 R >>\n";
-        $pdf .= "startxref\n{$xrefOffset}\n%%EOF";
-
-        return $pdf;
     }
 
     private function xlsxContentTypesXml(): string
@@ -449,4 +413,3 @@ XML;
         return $name;
     }
 }
-

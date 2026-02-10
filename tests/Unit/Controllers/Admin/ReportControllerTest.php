@@ -99,7 +99,7 @@ class ReportControllerTest extends TestCase
         $this->assertSame(200, $response->getStatusCode());
         $this->assertSame('application/pdf', $response->headers->get('Content-Type'));
         $this->assertStringContainsString('.pdf', (string) $response->headers->get('Content-Disposition'));
-        $this->assertStringStartsWith('%PDF-1.4', (string) $response->getContent());
+        $this->assertMatchesRegularExpression('/^%PDF-1\.[0-9]/', (string) $response->getContent());
     }
 
     public function test_download_xlsx_returns_binary_file_attachment(): void
@@ -190,4 +190,3 @@ class ReportControllerTest extends TestCase
         return [$closed, $confirmed, $draft];
     }
 }
-
