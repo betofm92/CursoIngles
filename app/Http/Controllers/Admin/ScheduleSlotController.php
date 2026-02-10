@@ -7,26 +7,71 @@ use App\Http\Requests\Admin\StoreEnrollmentRequest;
 use App\Models\Enrollment;
 use App\Models\ScheduleSlot;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 
 class ScheduleSlotController extends Controller
 {
     public function index(): View
     {
-        return view('admin.schedule-slots.index', [
-            'slots' => ScheduleSlot::query()
-                ->with([
-                    'teacher:id,name',
-                    'classroom:id,name,capacity',
-                    'courseTopic.course',
-                    'enrollments.student:id,name,email',
+        $slots = ScheduleSlot::query()
+            ->with([
+                'teacher:id,name',
+                'classroom:id,name,capacity',
+                'courseTopic.course',
+                'enrollments.student:id,name,email',
+            ])
+            ->withCount('enrollments')
+            ->whereIn('status', [ScheduleSlot::STATUS_CONFIRMED, ScheduleSlot::STATUS_CLOSED])
+            ->orderBy('day_of_week')
+            ->orderBy('starts_at')
+            ->get();
+
+        $dayOptions = ScheduleSlot::dayOptions();
+        $today = Carbon::now();
+        $weekStart = $today->copy()->startOfWeek(Carbon::MONDAY);
+        $nextWeekStart = $weekStart->copy()->addWeek();
+        $activeDay = $today->dayOfWeekIso > 6 ? 1 : $today->dayOfWeekIso;
+
+        $buildDays = function (Carbon $start) use ($dayOptions): array {
+            return collect($dayOptions)
+                ->map(fn (string $label, int $day): array => [
+                    'day_of_week' => $day,
+                    'label' => $label,
+                    'date' => $start->copy()->addDays($day - 1)->translatedFormat('d/m'),
                 ])
-                ->withCount('enrollments')
-                ->whereIn('status', [ScheduleSlot::STATUS_CONFIRMED, ScheduleSlot::STATUS_CLOSED])
-                ->orderBy('day_of_week')
-                ->orderBy('starts_at')
-                ->get(),
+                ->values()
+                ->all();
+        };
+
+        $weekScopes = [
+            [
+                'key' => 'current',
+                'label' => 'Semana actual',
+                'range' => sprintf('%s - %s', $weekStart->format('d/m'), $weekStart->copy()->addDays(5)->format('d/m')),
+                'days' => $buildDays($weekStart),
+            ],
+            [
+                'key' => 'next',
+                'label' => 'Semana siguiente',
+                'range' => sprintf('%s - %s', $nextWeekStart->format('d/m'), $nextWeekStart->copy()->addDays(5)->format('d/m')),
+                'days' => $buildDays($nextWeekStart),
+            ],
+        ];
+
+        $slotsByDay = $this->slotsByDay($slots, array_keys($dayOptions));
+        $slotsByScope = [
+            'current' => $slotsByDay,
+            'next' => $slotsByDay,
+        ];
+
+        return view('admin.schedule-slots.index', [
+            'slots' => $slots,
+            'weekScopes' => $weekScopes,
+            'activeDay' => $activeDay,
+            'slotsByScope' => $slotsByScope,
             'students' => User::role('estudiante')->orderBy('name')->get(['id', 'name', 'email']),
         ]);
     }
@@ -96,5 +141,23 @@ class ScheduleSlotController extends Controller
         $scheduleSlot->update(['status' => ScheduleSlot::STATUS_CLOSED]);
 
         return back()->with('success', 'Horario cerrado.');
+    }
+
+    /**
+     * @param EloquentCollection<int, ScheduleSlot> $slots
+     * @param list<int> $days
+     * @return array<int, EloquentCollection<int, ScheduleSlot>>
+     */
+    private function slotsByDay(EloquentCollection $slots, array $days): array
+    {
+        $byDay = [];
+
+        foreach ($days as $day) {
+            /** @var EloquentCollection<int, ScheduleSlot> $daySlots */
+            $daySlots = $slots->where('day_of_week', $day)->values();
+            $byDay[$day] = $daySlots;
+        }
+
+        return $byDay;
     }
 }

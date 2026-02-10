@@ -10,6 +10,7 @@ use App\Models\ScheduleSlot;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class ScheduleSlotControllerTest extends TestCase
@@ -21,6 +22,14 @@ class ScheduleSlotControllerTest extends TestCase
         parent::setUp();
 
         $this->seed(RolesAndPermissionsSeeder::class);
+        Carbon::setTestNow('2026-02-09 09:00:00');
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+
+        parent::tearDown();
     }
 
     public function test_index_returns_confirmed_and_closed_slots_and_student_catalog(): void
@@ -76,6 +85,24 @@ class ScheduleSlotControllerTest extends TestCase
         );
         $this->assertSame([$student->id], $data['students']->pluck('id')->all());
         $this->assertNotContains($otherUser->id, $data['students']->pluck('id')->all());
+        $this->assertSame(1, $data['activeDay']);
+        $this->assertCount(2, $data['weekScopes']);
+        $this->assertSame('current', $data['weekScopes'][0]['key']);
+        $this->assertSame('next', $data['weekScopes'][1]['key']);
+        $this->assertCount(6, $data['weekScopes'][0]['days']);
+        $this->assertSame('Lunes', $data['weekScopes'][0]['days'][0]['label']);
+        $this->assertEqualsCanonicalizing(
+            [$confirmed->id],
+            $data['slotsByScope']['current'][1]->pluck('id')->all()
+        );
+        $this->assertEqualsCanonicalizing(
+            [$closed->id],
+            $data['slotsByScope']['current'][2]->pluck('id')->all()
+        );
+        $this->assertEqualsCanonicalizing(
+            [$confirmed->id],
+            $data['slotsByScope']['next'][1]->pluck('id')->all()
+        );
     }
 
     /**
@@ -103,4 +130,3 @@ class ScheduleSlotControllerTest extends TestCase
         return [$classroom, $topic];
     }
 }
-
