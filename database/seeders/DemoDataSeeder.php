@@ -70,7 +70,7 @@ class DemoDataSeeder extends Seeder
             ['name' => 'Mateo Diaz', 'email' => 'estudiante4@cursoingles.test'],
             ['name' => 'Camila Vega', 'email' => 'estudiante5@cursoingles.test'],
             ['name' => 'Daniel Paredes', 'email' => 'estudiante6@cursoingles.test'],
-            ['name' => 'Valeria Nuñez', 'email' => 'estudiante7@cursoingles.test'],
+            ['name' => 'Valeria Nunez', 'email' => 'estudiante7@cursoingles.test'],
             ['name' => 'Jorge Molina', 'email' => 'estudiante8@cursoingles.test'],
             ['name' => 'Paula Castro', 'email' => 'estudiante9@cursoingles.test'],
             ['name' => 'Ricardo Salas', 'email' => 'estudiante10@cursoingles.test'],
@@ -333,3 +333,4 @@ class DemoDataSeeder extends Seeder
         );
     }
 }
+

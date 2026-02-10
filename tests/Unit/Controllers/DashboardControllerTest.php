@@ -85,10 +85,13 @@ class DashboardControllerTest extends TestCase
         $this->assertSame(1, $data['stats']['confirmed_slots']);
         $this->assertSame(1, $data['stats']['pending_slots']);
         $this->assertCount(2, $data['slots']);
-        $this->assertSame('Lunes', $data['todayDayLabel']);
-        $this->assertCount(1, $data['todayCourses']);
-        $this->assertSame('Ingles Dashboard', $data['todayCourses']->first()->courseTopic->course->name);
-        $this->assertSame($teacherA->name, $data['todayCourses']->first()->teacher->name);
+        $this->assertCount(6, $data['weekDays']);
+        $this->assertSame(1, $data['activeWeekDay']);
+        $this->assertSame('Lunes', $data['weekDays'][0]['label']);
+        $this->assertCount(1, $data['weekCoursesByDay'][1]);
+        $this->assertCount(1, $data['weekCoursesByDay'][2]);
+        $this->assertSame('Ingles Dashboard', $data['weekCoursesByDay'][1]->first()->courseTopic->course->name);
+        $this->assertSame($teacherA->name, $data['weekCoursesByDay'][1]->first()->teacher->name);
     }
 
     public function test_teacher_dashboard_only_uses_own_slots_for_stats(): void
@@ -142,9 +145,12 @@ class DashboardControllerTest extends TestCase
         $this->assertSame(1, $data['stats']['draft_slots']);
         $this->assertSame(1, $data['stats']['confirmed_slots']);
         $this->assertCount(2, $data['slots']);
-        $this->assertSame('Lunes', $data['todayDayLabel']);
-        $this->assertCount(1, $data['todayCourses']);
-        $this->assertSame(ScheduleSlot::STATUS_DRAFT, $data['todayCourses']->first()->status);
+        $this->assertCount(6, $data['weekDays']);
+        $this->assertSame(1, $data['activeWeekDay']);
+        $this->assertCount(1, $data['weekCoursesByDay'][1]);
+        $this->assertCount(1, $data['weekCoursesByDay'][2]);
+        $this->assertCount(0, $data['weekCoursesByDay'][3]);
+        $this->assertSame(ScheduleSlot::STATUS_DRAFT, $data['weekCoursesByDay'][1]->first()->status);
     }
 
     public function test_student_dashboard_only_shows_confirmed_assigned_slots(): void
@@ -212,9 +218,11 @@ class DashboardControllerTest extends TestCase
         $this->assertCount(1, $data['slots']);
         $this->assertSame($confirmedAssigned->id, $data['slots']->first()->id);
         $this->assertNotSame($confirmedUnassigned->id, $data['slots']->first()->id);
-        $this->assertSame('Lunes', $data['todayDayLabel']);
-        $this->assertCount(1, $data['todayCourses']);
-        $this->assertSame($confirmedAssigned->id, $data['todayCourses']->first()->id);
+        $this->assertCount(6, $data['weekDays']);
+        $this->assertSame(1, $data['activeWeekDay']);
+        $this->assertCount(1, $data['weekCoursesByDay'][1]);
+        $this->assertCount(0, $data['weekCoursesByDay'][2]);
+        $this->assertSame($confirmedAssigned->id, $data['weekCoursesByDay'][1]->first()->id);
     }
 
     /**
