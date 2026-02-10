@@ -23,7 +23,6 @@ class ScheduleSlot extends Model
         4 => 'Jueves',
         5 => 'Viernes',
         6 => 'Sabado',
-        7 => 'Domingo',
     ];
 
     protected $fillable = [

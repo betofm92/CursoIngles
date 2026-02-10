@@ -18,6 +18,7 @@ class ScheduleSlotModelTest extends TestCase
     public function test_day_options_and_day_label_accessor_work(): void
     {
         $this->assertSame('Lunes', ScheduleSlot::dayOptions()[1]);
+        $this->assertArrayNotHasKey(7, ScheduleSlot::dayOptions());
 
         $slot = new ScheduleSlot(['day_of_week' => 1]);
         $this->assertSame('Lunes', $slot->day_label);

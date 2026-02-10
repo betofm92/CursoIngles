@@ -12,6 +12,7 @@ use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class DashboardControllerTest extends TestCase
@@ -23,6 +24,14 @@ class DashboardControllerTest extends TestCase
         parent::setUp();
 
         $this->seed(RolesAndPermissionsSeeder::class);
+        Carbon::setTestNow('2026-02-09 09:30:00');
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+
+        parent::tearDown();
     }
 
     public function test_admin_dashboard_returns_expected_stats_and_slots(): void
@@ -76,6 +85,10 @@ class DashboardControllerTest extends TestCase
         $this->assertSame(1, $data['stats']['confirmed_slots']);
         $this->assertSame(1, $data['stats']['pending_slots']);
         $this->assertCount(2, $data['slots']);
+        $this->assertSame('Lunes', $data['todayDayLabel']);
+        $this->assertCount(1, $data['todayCourses']);
+        $this->assertSame('Ingles Dashboard', $data['todayCourses']->first()->courseTopic->course->name);
+        $this->assertSame($teacherA->name, $data['todayCourses']->first()->teacher->name);
     }
 
     public function test_teacher_dashboard_only_uses_own_slots_for_stats(): void
@@ -129,6 +142,9 @@ class DashboardControllerTest extends TestCase
         $this->assertSame(1, $data['stats']['draft_slots']);
         $this->assertSame(1, $data['stats']['confirmed_slots']);
         $this->assertCount(2, $data['slots']);
+        $this->assertSame('Lunes', $data['todayDayLabel']);
+        $this->assertCount(1, $data['todayCourses']);
+        $this->assertSame(ScheduleSlot::STATUS_DRAFT, $data['todayCourses']->first()->status);
     }
 
     public function test_student_dashboard_only_shows_confirmed_assigned_slots(): void
@@ -196,6 +212,9 @@ class DashboardControllerTest extends TestCase
         $this->assertCount(1, $data['slots']);
         $this->assertSame($confirmedAssigned->id, $data['slots']->first()->id);
         $this->assertNotSame($confirmedUnassigned->id, $data['slots']->first()->id);
+        $this->assertSame('Lunes', $data['todayDayLabel']);
+        $this->assertCount(1, $data['todayCourses']);
+        $this->assertSame($confirmedAssigned->id, $data['todayCourses']->first()->id);
     }
 
     /**
@@ -223,4 +242,3 @@ class DashboardControllerTest extends TestCase
         return [$classroom, $topic];
     }
 }
-

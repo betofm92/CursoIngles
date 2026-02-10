@@ -59,14 +59,15 @@ class UpdateScheduleSlotRequestTest extends TestCase
         $invalid = Validator::make([
             'classroom_id' => $classroom->id,
             'course_topic_id' => 999999,
-            'day_of_week' => 0,
-            'starts_at' => '17:00',
-            'ends_at' => '16:00',
+            'day_of_week' => 7,
+            'starts_at' => '20:00',
+            'ends_at' => '20:30',
             'notes' => str_repeat('a', 501),
         ], $request->rules());
         $this->assertTrue($invalid->fails());
         $this->assertArrayHasKey('course_topic_id', $invalid->errors()->toArray());
         $this->assertArrayHasKey('day_of_week', $invalid->errors()->toArray());
+        $this->assertArrayHasKey('starts_at', $invalid->errors()->toArray());
         $this->assertArrayHasKey('ends_at', $invalid->errors()->toArray());
         $this->assertArrayHasKey('notes', $invalid->errors()->toArray());
     }
@@ -98,4 +99,3 @@ class UpdateScheduleSlotRequestTest extends TestCase
         return [$classroom, $topic];
     }
 }
-

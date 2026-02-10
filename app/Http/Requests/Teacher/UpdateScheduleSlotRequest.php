@@ -24,9 +24,9 @@ class UpdateScheduleSlotRequest extends FormRequest
         return [
             'classroom_id' => ['required', 'integer', 'exists:classrooms,id'],
             'course_topic_id' => ['required', 'integer', 'exists:course_topics,id'],
-            'day_of_week' => ['required', 'integer', 'between:1,7'],
-            'starts_at' => ['required', 'date_format:H:i'],
-            'ends_at' => ['required', 'date_format:H:i', 'after:starts_at'],
+            'day_of_week' => ['required', 'integer', 'between:1,6'],
+            'starts_at' => ['required', 'date_format:H:i', 'after_or_equal:08:00', 'before:20:00'],
+            'ends_at' => ['required', 'date_format:H:i', 'after:starts_at', 'before_or_equal:20:00'],
             'notes' => ['nullable', 'string', 'max:500'],
         ];
     }

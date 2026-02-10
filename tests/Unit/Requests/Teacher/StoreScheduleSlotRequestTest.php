@@ -59,13 +59,14 @@ class StoreScheduleSlotRequestTest extends TestCase
         $invalid = Validator::make([
             'classroom_id' => 999999,
             'course_topic_id' => $topic->id,
-            'day_of_week' => 9,
-            'starts_at' => '10:00',
-            'ends_at' => '09:00',
+            'day_of_week' => 7,
+            'starts_at' => '07:30',
+            'ends_at' => '20:30',
         ], $request->rules());
         $this->assertTrue($invalid->fails());
         $this->assertArrayHasKey('classroom_id', $invalid->errors()->toArray());
         $this->assertArrayHasKey('day_of_week', $invalid->errors()->toArray());
+        $this->assertArrayHasKey('starts_at', $invalid->errors()->toArray());
         $this->assertArrayHasKey('ends_at', $invalid->errors()->toArray());
     }
 
@@ -96,4 +97,3 @@ class StoreScheduleSlotRequestTest extends TestCase
         return [$classroom, $topic];
     }
 }
-

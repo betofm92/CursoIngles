@@ -80,6 +80,39 @@
             @endif
 
             <section class="space-y-4">
+                <div class="flex items-baseline justify-between gap-3">
+                    <h3 class="font-display text-xl font-semibold text-slate-900 dark:text-slate-100">
+                        Cursos de hoy: {{ $todayDayLabel }}
+                    </h3>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        {{ $todayDateLabel }}
+                    </p>
+                </div>
+
+                <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    @forelse ($todayCourses as $courseSlot)
+                        <article class="schedule-card rounded-2xl border border-cyan-200 bg-cyan-50/80 p-5 shadow-sm dark:border-cyan-500/40 dark:bg-cyan-500/10">
+                            <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $courseSlot->courseTopic->course->name }}</p>
+                            <p class="mt-2 text-xs text-slate-700 dark:text-slate-300">
+                                <span class="font-semibold">Horario:</span>
+                                {{ substr($courseSlot->starts_at, 0, 5) }} - {{ substr($courseSlot->ends_at, 0, 5) }}
+                            </p>
+                            <p class="text-xs text-slate-700 dark:text-slate-300">
+                                <span class="font-semibold">Profesor:</span> {{ $courseSlot->teacher->name }}
+                            </p>
+                            <p class="text-xs text-slate-700 dark:text-slate-300">
+                                <span class="font-semibold">Inscritos:</span> {{ $courseSlot->enrollments_count }}
+                            </p>
+                        </article>
+                    @empty
+                        <div class="rounded-2xl border border-dashed border-slate-300 bg-white/70 p-6 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-300">
+                            No hay cursos registrados para hoy.
+                        </div>
+                    @endforelse
+                </div>
+            </section>
+
+            <section class="space-y-4">
                 <h3 class="font-display text-xl font-semibold text-slate-900 dark:text-slate-100">Vista rapida de horarios</h3>
                 <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     @forelse ($slots as $slot)

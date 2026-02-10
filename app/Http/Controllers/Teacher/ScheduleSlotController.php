@@ -45,6 +45,10 @@ class ScheduleSlotController extends Controller
         $validated = $request->validated();
 
         $this->ensureActiveReferences($validated['classroom_id'], $validated['course_topic_id']);
+        $this->ensureSingleTeacherPerCourse(
+            teacherId: $request->user()->id,
+            topicId: $validated['course_topic_id'],
+        );
         $this->ensureNoOverlap(
             teacherId: $request->user()->id,
             classroomId: $validated['classroom_id'],
@@ -67,6 +71,11 @@ class ScheduleSlotController extends Controller
 
         $validated = $request->validated();
         $this->ensureActiveReferences($validated['classroom_id'], $validated['course_topic_id']);
+        $this->ensureSingleTeacherPerCourse(
+            teacherId: $request->user()->id,
+            topicId: $validated['course_topic_id'],
+            ignoreSlotId: $scheduleSlot->id,
+        );
         $this->ensureNoOverlap(
             teacherId: $request->user()->id,
             classroomId: $validated['classroom_id'],
@@ -100,6 +109,11 @@ class ScheduleSlotController extends Controller
             return back()->with('error', 'Solo se pueden confirmar horarios en borrador.');
         }
 
+        $this->ensureSingleTeacherPerCourse(
+            teacherId: $request->user()->id,
+            topicId: $scheduleSlot->course_topic_id,
+            ignoreSlotId: $scheduleSlot->id,
+        );
         $this->ensureNoOverlap(
             teacherId: $request->user()->id,
             classroomId: $scheduleSlot->classroom_id,
@@ -141,6 +155,29 @@ class ScheduleSlotController extends Controller
         if (! CourseTopic::whereKey($topicId)->where('is_active', true)->whereHas('course', fn ($query) => $query->where('is_active', true))->exists()) {
             throw ValidationException::withMessages([
                 'course_topic_id' => 'El tema de curso seleccionado no esta disponible.',
+            ]);
+        }
+    }
+
+    private function ensureSingleTeacherPerCourse(int $teacherId, int $topicId, ?int $ignoreSlotId = null): void
+    {
+        $courseId = CourseTopic::query()->whereKey($topicId)->value('course_id');
+        if (! $courseId) {
+            return;
+        }
+
+        $courseConflictQuery = ScheduleSlot::query()
+            ->where('status', '!=', ScheduleSlot::STATUS_CLOSED)
+            ->where('teacher_id', '!=', $teacherId)
+            ->whereHas('courseTopic', fn ($query) => $query->where('course_id', $courseId));
+
+        if ($ignoreSlotId !== null) {
+            $courseConflictQuery->whereKeyNot($ignoreSlotId);
+        }
+
+        if ($courseConflictQuery->exists()) {
+            throw ValidationException::withMessages([
+                'course_topic_id' => 'Este curso ya tiene un profesor asignado.',
             ]);
         }
     }

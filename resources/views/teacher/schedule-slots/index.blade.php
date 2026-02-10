@@ -26,12 +26,12 @@
 
                     <div>
                         <label for="starts_at" class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Hora inicio</label>
-                        <input id="starts_at" name="starts_at" type="time" value="{{ old('starts_at', '08:00') }}" class="w-full rounded-xl border-slate-300 bg-white text-sm text-slate-900 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-cyan-400 dark:focus:ring-cyan-400">
+                        <input id="starts_at" name="starts_at" type="time" min="08:00" max="19:59" value="{{ old('starts_at', '08:00') }}" class="w-full rounded-xl border-slate-300 bg-white text-sm text-slate-900 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-cyan-400 dark:focus:ring-cyan-400">
                     </div>
 
                     <div>
                         <label for="ends_at" class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Hora fin</label>
-                        <input id="ends_at" name="ends_at" type="time" value="{{ old('ends_at', '10:00') }}" class="w-full rounded-xl border-slate-300 bg-white text-sm text-slate-900 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-cyan-400 dark:focus:ring-cyan-400">
+                        <input id="ends_at" name="ends_at" type="time" min="08:01" max="20:00" value="{{ old('ends_at', '10:00') }}" class="w-full rounded-xl border-slate-300 bg-white text-sm text-slate-900 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-cyan-400 dark:focus:ring-cyan-400">
                     </div>
 
                     <div>
@@ -145,12 +145,12 @@
 
                                         <div>
                                             <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Inicio</label>
-                                            <input type="time" name="starts_at" value="{{ substr($slot->starts_at, 0, 5) }}" class="w-full rounded-xl border-slate-300 bg-white text-sm text-slate-900 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-cyan-400 dark:focus:ring-cyan-400">
+                                            <input type="time" name="starts_at" min="08:00" max="19:59" value="{{ substr($slot->starts_at, 0, 5) }}" class="w-full rounded-xl border-slate-300 bg-white text-sm text-slate-900 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-cyan-400 dark:focus:ring-cyan-400">
                                         </div>
 
                                         <div>
                                             <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Fin</label>
-                                            <input type="time" name="ends_at" value="{{ substr($slot->ends_at, 0, 5) }}" class="w-full rounded-xl border-slate-300 bg-white text-sm text-slate-900 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-cyan-400 dark:focus:ring-cyan-400">
+                                            <input type="time" name="ends_at" min="08:01" max="20:00" value="{{ substr($slot->ends_at, 0, 5) }}" class="w-full rounded-xl border-slate-300 bg-white text-sm text-slate-900 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-cyan-400 dark:focus:ring-cyan-400">
                                         </div>
 
                                         <div class="md:col-span-2">

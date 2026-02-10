@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ScheduleSlot;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
@@ -12,6 +13,10 @@ class DashboardController extends Controller
     public function __invoke(Request $request): View
     {
         $user = $request->user();
+        $today = Carbon::now();
+        $todayDayOfWeek = $today->dayOfWeekIso;
+        $todayDayLabel = ScheduleSlot::dayOptions()[$todayDayOfWeek] ?? 'Domingo';
+        $todayDateLabel = $today->translatedFormat('d/m/Y');
 
         if ($user->hasRole('admin')) {
             return view('dashboard', [
@@ -28,6 +33,15 @@ class DashboardController extends Controller
                     ->orderBy('day_of_week')
                     ->orderBy('starts_at')
                     ->limit(6)
+                    ->get(),
+                'todayDayLabel' => $todayDayLabel,
+                'todayDateLabel' => $todayDateLabel,
+                'todayCourses' => ScheduleSlot::query()
+                    ->with(['teacher:id,name', 'courseTopic.course'])
+                    ->withCount('enrollments')
+                    ->where('day_of_week', $todayDayOfWeek)
+                    ->whereIn('status', [ScheduleSlot::STATUS_DRAFT, ScheduleSlot::STATUS_CONFIRMED])
+                    ->orderBy('starts_at')
                     ->get(),
             ]);
         }
@@ -46,6 +60,15 @@ class DashboardController extends Controller
                     ->orderBy('day_of_week')
                     ->orderBy('starts_at')
                     ->limit(6)
+                    ->get(),
+                'todayDayLabel' => $todayDayLabel,
+                'todayDateLabel' => $todayDateLabel,
+                'todayCourses' => $user->teachingSlots()
+                    ->with(['teacher:id,name', 'courseTopic.course'])
+                    ->withCount('enrollments')
+                    ->where('day_of_week', $todayDayOfWeek)
+                    ->whereIn('status', [ScheduleSlot::STATUS_DRAFT, ScheduleSlot::STATUS_CONFIRMED])
+                    ->orderBy('starts_at')
                     ->get(),
             ]);
         }
@@ -66,6 +89,16 @@ class DashboardController extends Controller
                 ->orderBy('day_of_week')
                 ->orderBy('starts_at')
                 ->limit(6)
+                ->get(),
+            'todayDayLabel' => $todayDayLabel,
+            'todayDateLabel' => $todayDateLabel,
+            'todayCourses' => ScheduleSlot::query()
+                ->with(['teacher:id,name', 'courseTopic.course'])
+                ->withCount('enrollments')
+                ->where('status', ScheduleSlot::STATUS_CONFIRMED)
+                ->where('day_of_week', $todayDayOfWeek)
+                ->whereHas('enrollments', fn ($query) => $query->where('student_id', $user->id))
+                ->orderBy('starts_at')
                 ->get(),
         ]);
     }
