@@ -10,7 +10,32 @@
         <div class="mx-auto max-w-7xl space-y-6 px-4 sm:px-6 lg:px-8">
             <x-flash-messages />
 
-            <section x-data="{ createOpen: false, activeScope: 'current', activeDay: {{ $activeDay }} }" class="relative space-y-4 overflow-visible">
+            @php
+                $assignmentFormFieldKeys = [
+                    'course_code',
+                    'course_name',
+                    'teacher_id',
+                    'topic_title',
+                    'day_of_week',
+                    'classroom_id',
+                    'starts_at',
+                    'ends_at',
+                    'student_ids',
+                    'course_description',
+                    'topic_description',
+                    'notes',
+                    'role',
+                    'name',
+                    'email',
+                ];
+                $openCreateSection = collect($assignmentFormFieldKeys)->contains(fn (string $key) => old($key) !== null)
+                    || $errors->hasAny($assignmentFormFieldKeys);
+                $initialQuickUserModal = old('role') === 'profesor'
+                    ? 'teacher'
+                    : (old('role') === 'estudiante' ? 'student' : null);
+            @endphp
+
+            <section x-data="{ createOpen: @js($openCreateSection), activeScope: 'current', activeDay: {{ $activeDay }} }" class="relative space-y-4 overflow-visible">
                 <h3 class="font-display text-xl font-semibold text-slate-900 dark:text-slate-100">Asignaciones por semana y dia</h3>
                 <p class="text-sm text-slate-600 dark:text-slate-300">
                     Cambia entre semana actual y semana siguiente para planificar; los horarios se visualizan de lunes a sabado.
@@ -45,13 +70,15 @@
                             ->values();
                     @endphp
 
-                    <form method="POST" action="{{ route('admin.schedule-slots.courses.store') }}" x-data="courseCreatorForm({
+                    <div x-data="courseCreatorForm({
                         teachers: @js($teacherOptions),
                         students: @js($studentOptions),
                         selectedTeacherId: @js(old('teacher_id') ? (int) old('teacher_id') : null),
                         selectedStudentIds: @js($oldStudentIds),
-                    })" class="relative z-20 mt-4 grid gap-4 overflow-visible md:grid-cols-2 lg:grid-cols-3">
-                        @csrf
+                        quickUserModal: @js($initialQuickUserModal),
+                    })" class="relative z-20 mt-4 space-y-4" x-on:keydown.escape.window="closeQuickUserModal()">
+                        <form method="POST" action="{{ route('admin.schedule-slots.courses.store') }}" class="grid gap-4 overflow-visible md:grid-cols-2 lg:grid-cols-3">
+                            @csrf
 
                         <div>
                             <label for="course_code" class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Codigo de curso</label>
@@ -64,7 +91,12 @@
                         </div>
 
                         <div class="relative z-30 overflow-visible md:col-span-2 lg:col-span-1" x-on:click.outside="teacherOpen = false">
-                            <label for="teacher_search" class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Profesor</label>
+                            <div class="mb-1 flex items-center justify-between gap-2">
+                                <label for="teacher_search" class="block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Profesor</label>
+                                <button type="button" x-on:click="openQuickUserModal('teacher')" class="inline-flex items-center rounded-lg border border-cyan-300 bg-cyan-50 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-cyan-700 transition hover:bg-cyan-100 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-300 dark:hover:bg-cyan-500/20">
+                                    Nuevo profesor
+                                </button>
+                            </div>
                             <input id="teacher_search" type="text" x-model="teacherSearch" x-on:focus="teacherOpen = true" x-on:input="teacherOpen = true; selectedTeacherId = null" placeholder="Buscar profesor por nombre o email..." class="w-full rounded-xl border-slate-300 bg-white text-sm text-slate-900 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-cyan-400 dark:focus:ring-cyan-400">
                             <input type="hidden" name="teacher_id" :value="selectedTeacherId">
 
@@ -120,7 +152,12 @@
                         </div>
 
                         <div class="relative z-30 overflow-visible md:col-span-2 lg:col-span-3" x-on:click.outside="studentOpen = false">
-                            <label for="student_search" class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Estudiantes iniciales (opcional)</label>
+                            <div class="mb-1 flex items-center justify-between gap-2">
+                                <label for="student_search" class="block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Estudiantes iniciales (opcional)</label>
+                                <button type="button" x-on:click="openQuickUserModal('student')" class="inline-flex items-center rounded-lg border border-cyan-300 bg-cyan-50 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-cyan-700 transition hover:bg-cyan-100 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-300 dark:hover:bg-cyan-500/20">
+                                    Nuevo estudiante
+                                </button>
+                            </div>
                             <input id="student_search" type="text" x-model="studentSearch" x-on:focus="studentOpen = true" x-on:input="studentOpen = true" placeholder="Buscar estudiante por nombre o email..." class="w-full rounded-xl border-slate-300 bg-white text-sm text-slate-900 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-cyan-400 dark:focus:ring-cyan-400">
 
                             <div x-show="studentOpen" x-cloak class="absolute left-0 right-0 mt-2 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-900" style="max-height: calc(3.5rem * 8 + 1rem); z-index: 2147483000;">
@@ -177,7 +214,108 @@
                                 Guardar curso
                             </button>
                         </div>
-                    </form>
+                        </form>
+
+                        <div x-show="quickUserModal === 'teacher'" x-cloak class="fixed inset-0 flex items-center justify-center p-4" style="z-index: 2147483600;">
+                            <button type="button" x-on:click="closeQuickUserModal()" class="absolute inset-0 bg-slate-950/60 backdrop-blur-[1px]"></button>
+
+                            <article class="relative z-10 w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div>
+                                        <h5 class="font-display text-lg font-semibold text-slate-900 dark:text-slate-100">Nuevo profesor</h5>
+                                        <p class="text-sm text-slate-600 dark:text-slate-300">Crea el profesor sin salir de Asignaciones.</p>
+                                    </div>
+                                    <button type="button" x-on:click="closeQuickUserModal()" class="rounded-lg border border-slate-300 px-2 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800">
+                                        Cerrar
+                                    </button>
+                                </div>
+
+                                <form method="POST" action="{{ route('admin.users.store') }}" class="mt-4 grid gap-4 md:grid-cols-2">
+                                    @csrf
+                                    <input type="hidden" name="role" value="profesor">
+
+                                    <div>
+                                        <label for="quick_teacher_name" class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Nombre</label>
+                                        <input id="quick_teacher_name" name="name" type="text" value="{{ old('role') === 'profesor' ? old('name') : '' }}" required class="w-full rounded-xl border-slate-300 bg-white text-sm text-slate-900 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-cyan-400 dark:focus:ring-cyan-400">
+                                    </div>
+
+                                    <div>
+                                        <label for="quick_teacher_email" class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Email</label>
+                                        <input id="quick_teacher_email" name="email" type="email" value="{{ old('role') === 'profesor' ? old('email') : '' }}" required class="w-full rounded-xl border-slate-300 bg-white text-sm text-slate-900 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-cyan-400 dark:focus:ring-cyan-400">
+                                    </div>
+
+                                    <div>
+                                        <label for="quick_teacher_password" class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Contrasena</label>
+                                        <input id="quick_teacher_password" name="password" type="password" required class="w-full rounded-xl border-slate-300 bg-white text-sm text-slate-900 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-cyan-400 dark:focus:ring-cyan-400">
+                                    </div>
+
+                                    <div>
+                                        <label for="quick_teacher_password_confirmation" class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Confirmar contrasena</label>
+                                        <input id="quick_teacher_password_confirmation" name="password_confirmation" type="password" required class="w-full rounded-xl border-slate-300 bg-white text-sm text-slate-900 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-cyan-400 dark:focus:ring-cyan-400">
+                                    </div>
+
+                                    <div class="md:col-span-2 flex flex-wrap justify-end gap-2">
+                                        <button type="button" x-on:click="closeQuickUserModal()" class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-700 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800">
+                                            Cancelar
+                                        </button>
+                                        <button type="submit" class="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-slate-800 dark:bg-cyan-500 dark:text-slate-950 dark:hover:bg-cyan-400">
+                                            Guardar profesor
+                                        </button>
+                                    </div>
+                                </form>
+                            </article>
+                        </div>
+
+                        <div x-show="quickUserModal === 'student'" x-cloak class="fixed inset-0 flex items-center justify-center p-4" style="z-index: 2147483600;">
+                            <button type="button" x-on:click="closeQuickUserModal()" class="absolute inset-0 bg-slate-950/60 backdrop-blur-[1px]"></button>
+
+                            <article class="relative z-10 w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div>
+                                        <h5 class="font-display text-lg font-semibold text-slate-900 dark:text-slate-100">Nuevo estudiante</h5>
+                                        <p class="text-sm text-slate-600 dark:text-slate-300">Crea el estudiante sin salir de Asignaciones.</p>
+                                    </div>
+                                    <button type="button" x-on:click="closeQuickUserModal()" class="rounded-lg border border-slate-300 px-2 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800">
+                                        Cerrar
+                                    </button>
+                                </div>
+
+                                <form method="POST" action="{{ route('admin.users.store') }}" class="mt-4 grid gap-4 md:grid-cols-2">
+                                    @csrf
+                                    <input type="hidden" name="role" value="estudiante">
+
+                                    <div>
+                                        <label for="quick_student_name" class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Nombre</label>
+                                        <input id="quick_student_name" name="name" type="text" value="{{ old('role') === 'estudiante' ? old('name') : '' }}" required class="w-full rounded-xl border-slate-300 bg-white text-sm text-slate-900 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-cyan-400 dark:focus:ring-cyan-400">
+                                    </div>
+
+                                    <div>
+                                        <label for="quick_student_email" class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Email</label>
+                                        <input id="quick_student_email" name="email" type="email" value="{{ old('role') === 'estudiante' ? old('email') : '' }}" required class="w-full rounded-xl border-slate-300 bg-white text-sm text-slate-900 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-cyan-400 dark:focus:ring-cyan-400">
+                                    </div>
+
+                                    <div>
+                                        <label for="quick_student_password" class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Contrasena</label>
+                                        <input id="quick_student_password" name="password" type="password" required class="w-full rounded-xl border-slate-300 bg-white text-sm text-slate-900 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-cyan-400 dark:focus:ring-cyan-400">
+                                    </div>
+
+                                    <div>
+                                        <label for="quick_student_password_confirmation" class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Confirmar contrasena</label>
+                                        <input id="quick_student_password_confirmation" name="password_confirmation" type="password" required class="w-full rounded-xl border-slate-300 bg-white text-sm text-slate-900 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-cyan-400 dark:focus:ring-cyan-400">
+                                    </div>
+
+                                    <div class="md:col-span-2 flex flex-wrap justify-end gap-2">
+                                        <button type="button" x-on:click="closeQuickUserModal()" class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-700 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800">
+                                            Cancelar
+                                        </button>
+                                        <button type="submit" class="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-slate-800 dark:bg-cyan-500 dark:text-slate-950 dark:hover:bg-cyan-400">
+                                            Guardar estudiante
+                                        </button>
+                                    </div>
+                                </form>
+                            </article>
+                        </div>
+                    </div>
                 </section>
 
                 <div class="flex flex-wrap gap-2">
@@ -315,6 +453,7 @@
                 students: config.students ?? [],
                 selectedTeacherId: config.selectedTeacherId ?? null,
                 selectedStudentIds: (config.selectedStudentIds ?? []).map((id) => Number(id)),
+                quickUserModal: config.quickUserModal ?? null,
                 teacherSearch: '',
                 studentSearch: '',
                 teacherOpen: false,
@@ -376,6 +515,14 @@
 
                 selectedStudents() {
                     return this.students.filter((student) => this.isStudentSelected(student.id));
+                },
+
+                openQuickUserModal(type) {
+                    this.quickUserModal = type;
+                },
+
+                closeQuickUserModal() {
+                    this.quickUserModal = null;
                 },
             };
         }
