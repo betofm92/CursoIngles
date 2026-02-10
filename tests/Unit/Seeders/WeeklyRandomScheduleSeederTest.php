@@ -65,6 +65,8 @@ class WeeklyRandomScheduleSeederTest extends TestCase
             ->get()
             ->groupBy('day_of_week');
 
+        $conflicts = [];
+
         foreach ($weeklySlots as $daySlots) {
             $slots = $daySlots->values();
             $count = $slots->count();
@@ -81,17 +83,28 @@ class WeeklyRandomScheduleSeederTest extends TestCase
                         continue;
                     }
 
-                    $this->assertFalse(
-                        $slotA->classroom_id === $slotB->classroom_id,
-                        'Dos cursos no pueden compartir aula en el mismo horario.'
-                    );
-                    $this->assertFalse(
-                        $slotA->teacher_id === $slotB->teacher_id,
-                        'Un profesor no puede tener cursos simultaneos.'
-                    );
+                    if ($slotA->classroom_id === $slotB->classroom_id) {
+                        $conflicts[] = sprintf(
+                            'Conflicto de aula en dia %d: slots %d y %d',
+                            (int) $slotA->day_of_week,
+                            (int) $slotA->id,
+                            (int) $slotB->id
+                        );
+                    }
+
+                    if ($slotA->teacher_id === $slotB->teacher_id) {
+                        $conflicts[] = sprintf(
+                            'Conflicto de profesor en dia %d: slots %d y %d',
+                            (int) $slotA->day_of_week,
+                            (int) $slotA->id,
+                            (int) $slotB->id
+                        );
+                    }
                 }
             }
         }
+
+        $this->assertCount(0, $conflicts, implode(PHP_EOL, $conflicts));
     }
 
     private function toMinutes(string $timeValue): int
@@ -101,4 +114,3 @@ class WeeklyRandomScheduleSeederTest extends TestCase
         return ((int) $hours * 60) + (int) $minutes;
     }
 }
-

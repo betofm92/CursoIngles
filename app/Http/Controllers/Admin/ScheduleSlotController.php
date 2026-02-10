@@ -3,13 +3,20 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StoreCourseRequest;
 use App\Http\Requests\Admin\StoreEnrollmentRequest;
+use App\Models\Classroom;
+use App\Models\Course;
+use App\Models\CourseTopic;
 use App\Models\Enrollment;
 use App\Models\ScheduleSlot;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class ScheduleSlotController extends Controller
@@ -72,8 +79,124 @@ class ScheduleSlotController extends Controller
             'weekScopes' => $weekScopes,
             'activeDay' => $activeDay,
             'slotsByScope' => $slotsByScope,
+            'dayOptions' => $dayOptions,
+            'teachers' => User::role('profesor')->orderBy('name')->get(['id', 'name', 'email']),
+            'classrooms' => Classroom::query()->where('is_active', true)->orderBy('name')->get(['id', 'name', 'capacity']),
             'students' => User::role('estudiante')->orderBy('name')->get(['id', 'name', 'email']),
         ]);
+    }
+
+    public function storeCourse(StoreCourseRequest $request): RedirectResponse
+    {
+        $validated = $request->validated();
+
+        $teacher = User::role('profesor')->whereKey($validated['teacher_id'])->first();
+        if (! $teacher) {
+            throw ValidationException::withMessages([
+                'teacher_id' => 'El usuario seleccionado no tiene rol de profesor.',
+            ]);
+        }
+
+        $classroom = Classroom::query()
+            ->whereKey($validated['classroom_id'])
+            ->where('is_active', true)
+            ->first();
+        if (! $classroom) {
+            throw ValidationException::withMessages([
+                'classroom_id' => 'El aula seleccionada no esta disponible.',
+            ]);
+        }
+
+        $studentIds = collect($validated['student_ids'] ?? [])
+            ->map(fn (int|string $id): int => (int) $id)
+            ->unique()
+            ->values();
+
+        $validStudentCount = User::role('estudiante')->whereIn('id', $studentIds)->count();
+        if ($validStudentCount !== $studentIds->count()) {
+            throw ValidationException::withMessages([
+                'student_ids' => 'Uno o mas usuarios seleccionados no tienen rol de estudiante.',
+            ]);
+        }
+
+        $capacity = min((int) $classroom->capacity, 8);
+        if ($studentIds->count() > $capacity) {
+            throw ValidationException::withMessages([
+                'student_ids' => 'No puedes asignar mas estudiantes que la capacidad del aula.',
+            ]);
+        }
+
+        $baseConflictQuery = ScheduleSlot::query()
+            ->where('day_of_week', $validated['day_of_week'])
+            ->where('status', '!=', ScheduleSlot::STATUS_CLOSED)
+            ->where('starts_at', '<', $validated['ends_at'])
+            ->where('ends_at', '>', $validated['starts_at']);
+
+        if ((clone $baseConflictQuery)->where('teacher_id', $teacher->id)->exists()) {
+            throw ValidationException::withMessages([
+                'starts_at' => 'El profesor ya tiene un horario que se cruza en ese rango.',
+            ]);
+        }
+
+        if ((clone $baseConflictQuery)->where('classroom_id', $classroom->id)->exists()) {
+            throw ValidationException::withMessages([
+                'classroom_id' => 'El aula ya esta ocupada en ese rango.',
+            ]);
+        }
+
+        if ($studentIds->isNotEmpty()) {
+            $studentsWithOverlap = ScheduleSlot::query()
+                ->where('status', ScheduleSlot::STATUS_CONFIRMED)
+                ->where('day_of_week', $validated['day_of_week'])
+                ->where('starts_at', '<', $validated['ends_at'])
+                ->where('ends_at', '>', $validated['starts_at'])
+                ->whereHas('enrollments', fn ($query) => $query->whereIn('student_id', $studentIds))
+                ->exists();
+
+            if ($studentsWithOverlap) {
+                throw ValidationException::withMessages([
+                    'student_ids' => 'Uno o mas estudiantes ya tienen una clase en ese rango horario.',
+                ]);
+            }
+        }
+
+        DB::transaction(function () use ($validated, $teacher, $classroom, $studentIds, $request): void {
+            $course = Course::create([
+                'code' => Str::upper($validated['course_code']),
+                'name' => $validated['course_name'],
+                'description' => $validated['course_description'] ?? null,
+                'is_active' => true,
+            ]);
+
+            $topic = CourseTopic::create([
+                'course_id' => $course->id,
+                'title' => $validated['topic_title'],
+                'description' => $validated['topic_description'] ?? null,
+                'is_active' => true,
+            ]);
+
+            $slot = ScheduleSlot::create([
+                'teacher_id' => $teacher->id,
+                'classroom_id' => $classroom->id,
+                'course_topic_id' => $topic->id,
+                'day_of_week' => $validated['day_of_week'],
+                'starts_at' => $validated['starts_at'],
+                'ends_at' => $validated['ends_at'],
+                'status' => ScheduleSlot::STATUS_CONFIRMED,
+                'confirmed_at' => now(),
+                'notes' => $validated['notes'] ?? null,
+            ]);
+
+            foreach ($studentIds as $studentId) {
+                Enrollment::create([
+                    'schedule_slot_id' => $slot->id,
+                    'student_id' => $studentId,
+                    'created_by' => $request->user()->id,
+                ]);
+            }
+        });
+
+        return back()->with('success', 'Curso creado y horario confirmado correctamente.');
     }
 
     public function storeEnrollment(StoreEnrollmentRequest $request, ScheduleSlot $scheduleSlot): RedirectResponse

@@ -25,6 +25,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/horarios', [AdminScheduleSlotController::class, 'index'])->name('schedule-slots.index');
+        Route::post('/horarios/cursos', [AdminScheduleSlotController::class, 'storeCourse'])->name('schedule-slots.courses.store');
         Route::post('/horarios/{scheduleSlot}/enrollments', [AdminScheduleSlotController::class, 'storeEnrollment'])->name('schedule-slots.enrollments.store');
         Route::delete('/horarios/{scheduleSlot}/enrollments/{enrollment}', [AdminScheduleSlotController::class, 'destroyEnrollment'])->name('schedule-slots.enrollments.destroy');
         Route::patch('/horarios/{scheduleSlot}/close', [AdminScheduleSlotController::class, 'close'])->name('schedule-slots.close');

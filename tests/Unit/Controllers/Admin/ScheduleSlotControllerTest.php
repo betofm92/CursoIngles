@@ -85,6 +85,12 @@ class ScheduleSlotControllerTest extends TestCase
         );
         $this->assertSame([$student->id], $data['students']->pluck('id')->all());
         $this->assertNotContains($otherUser->id, $data['students']->pluck('id')->all());
+        $this->assertEqualsCanonicalizing(
+            [$teacher->id, $otherUser->id],
+            $data['teachers']->pluck('id')->all()
+        );
+        $this->assertSame([$classroom->id], $data['classrooms']->pluck('id')->all());
+        $this->assertSame('Lunes', $data['dayOptions'][1]);
         $this->assertSame(1, $data['activeDay']);
         $this->assertCount(2, $data['weekScopes']);
         $this->assertSame('current', $data['weekScopes'][0]['key']);
