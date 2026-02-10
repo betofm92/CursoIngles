@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\ScheduleSlotController as AdminScheduleSlotController;
+use App\Http\Controllers\Admin\ReportController as AdminReportController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
@@ -34,6 +35,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/usuarios', [UserManagementController::class, 'store'])->name('users.store');
         Route::put('/usuarios/{user}', [UserManagementController::class, 'update'])->name('users.update');
         Route::delete('/usuarios/{user}', [UserManagementController::class, 'destroy'])->name('users.destroy');
+
+        Route::get('/reportes', [AdminReportController::class, 'index'])->name('reports.index');
+        Route::get('/reportes/descargar', [AdminReportController::class, 'download'])->name('reports.download');
     });
 
     Route::middleware('role:estudiante')->prefix('estudiante')->name('student.')->group(function () {
