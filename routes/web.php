@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\ScheduleSlotController as AdminScheduleSlotController;
+use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Student\ScheduleSlotController as StudentScheduleSlotController;
@@ -27,6 +28,11 @@ Route::middleware('auth')->group(function () {
         Route::post('/horarios/{scheduleSlot}/enrollments', [AdminScheduleSlotController::class, 'storeEnrollment'])->name('schedule-slots.enrollments.store');
         Route::delete('/horarios/{scheduleSlot}/enrollments/{enrollment}', [AdminScheduleSlotController::class, 'destroyEnrollment'])->name('schedule-slots.enrollments.destroy');
         Route::patch('/horarios/{scheduleSlot}/close', [AdminScheduleSlotController::class, 'close'])->name('schedule-slots.close');
+
+        Route::get('/usuarios', [UserManagementController::class, 'index'])->name('users.index');
+        Route::post('/usuarios', [UserManagementController::class, 'store'])->name('users.store');
+        Route::put('/usuarios/{user}', [UserManagementController::class, 'update'])->name('users.update');
+        Route::delete('/usuarios/{user}', [UserManagementController::class, 'destroy'])->name('users.destroy');
     });
 
     Route::middleware('role:estudiante')->prefix('estudiante')->name('student.')->group(function () {

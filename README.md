@@ -72,4 +72,5 @@ Contrasena para todos: `password`
 - Dashboard: `/dashboard`
 - Profesor: `/profesor/horarios`
 - Admin: `/admin/horarios`
+- Admin usuarios: `/admin/usuarios`
 - Estudiante: `/estudiante/horarios`

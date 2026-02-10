@@ -17,6 +17,9 @@
                         <x-nav-link :href="route('admin.schedule-slots.index')" :active="request()->routeIs('admin.schedule-slots.*')">
                             Asignaciones
                         </x-nav-link>
+                        <x-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.users.*')">
+                            Usuarios
+                        </x-nav-link>
                     @endif
 
                     @if (Auth::user()->hasRole('profesor'))
@@ -85,6 +88,9 @@
             @if (Auth::user()->hasRole('admin'))
                 <x-responsive-nav-link :href="route('admin.schedule-slots.index')" :active="request()->routeIs('admin.schedule-slots.*')">
                     Asignaciones
+                </x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.users.*')">
+                    Usuarios
                 </x-responsive-nav-link>
             @endif
 

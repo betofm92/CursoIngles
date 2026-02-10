@@ -39,9 +39,14 @@
                     </div>
                 </div>
 
-                <a href="{{ route('admin.schedule-slots.index') }}" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-cyan-500 dark:text-slate-950 dark:hover:bg-cyan-400">
-                    Ir a asignaciones de estudiantes
-                </a>
+                <div class="flex flex-wrap items-center gap-3">
+                    <a href="{{ route('admin.schedule-slots.index') }}" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-cyan-500 dark:text-slate-950 dark:hover:bg-cyan-400">
+                        Ir a asignaciones de estudiantes
+                    </a>
+                    <a href="{{ route('admin.users.index') }}" class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800">
+                        Gestionar usuarios
+                    </a>
+                </div>
             @elseif ($role === 'profesor')
                 <div class="grid gap-4 md:grid-cols-3">
                     <div class="rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/85">
