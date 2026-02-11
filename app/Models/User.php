@@ -64,4 +64,10 @@ class User extends Authenticatable
         return $this->belongsToMany(ScheduleSlot::class, 'enrollments', 'student_id', 'schedule_slot_id')
             ->withTimestamps();
     }
+
+    public function books(): BelongsToMany
+    {
+        return $this->belongsToMany(Book::class, 'book_student', 'student_id', 'book_id')
+            ->withTimestamps();
+    }
 }

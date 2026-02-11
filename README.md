@@ -82,4 +82,5 @@ Contrasena para todos: `password`
 - Profesor: `/profesor/horarios`
 - Admin: `/admin/horarios`
 - Admin usuarios: `/admin/usuarios`
+- Admin libros: `/admin/libros`
 - Estudiante: `/estudiante/horarios`
