@@ -39,7 +39,7 @@ class ReportControllerTest extends TestCase
         [$closed, $confirmed, $draft] = $this->createSlots();
 
         $request = Request::create('/admin/reportes', 'GET', [
-            'status' => ScheduleSlot::STATUS_CLOSED,
+            'status' => 'active',
             'week_scope' => 'next',
         ]);
 
@@ -47,21 +47,18 @@ class ReportControllerTest extends TestCase
         $data = $view->getData();
 
         $this->assertSame('admin.reports.index', $view->name());
-        $this->assertSame(ScheduleSlot::STATUS_CLOSED, $data['statusFilter']);
+        $this->assertSame('active', $data['statusFilter']);
         $this->assertSame('next', $data['activeScope']);
         $this->assertCount(2, $data['weekScopes']);
         $this->assertSame('Semana actual', $data['weekScopes'][0]['label']);
         $this->assertSame('Semana siguiente', $data['weekScopes'][1]['label']);
-        $this->assertEqualsCanonicalizing(
-            [$closed->id],
-            $data['slotsByScope']['current'][2]->pluck('id')->all()
-        );
-        $this->assertEqualsCanonicalizing(
-            [$closed->id],
-            $data['slotsByScope']['next'][2]->pluck('id')->all()
-        );
-        $this->assertNotContains($confirmed->id, $data['slotsByScope']['current'][3]->pluck('id')->all());
-        $this->assertNotContains($draft->id, $data['slotsByScope']['current'][4]->pluck('id')->all());
+        $this->assertCount(0, $data['slotsByScope']['current'][2]);
+        $this->assertCount(0, $data['slotsByScope']['next'][2]);
+        $this->assertContains($confirmed->id, $data['slotsByScope']['current'][3]->pluck('id')->all());
+        $this->assertContains($confirmed->id, $data['slotsByScope']['next'][3]->pluck('id')->all());
+        $this->assertContains($draft->id, $data['slotsByScope']['current'][4]->pluck('id')->all());
+        $this->assertContains($draft->id, $data['slotsByScope']['next'][4]->pluck('id')->all());
+        $this->assertNotContains($closed->id, $data['slotsByScope']['current'][2]->pluck('id')->all());
     }
 
     public function test_download_csv_returns_expected_attachment(): void

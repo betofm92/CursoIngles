@@ -35,7 +35,7 @@ Dependencias clave:
 - `package.json`
 
 Configuracion base:
-- `.env.example` usa SQLite por defecto.
+- `.env.example` usa MySQL por defecto.
 - Locale de app: `es`.
 
 ## 3. Arquitectura General
@@ -242,7 +242,7 @@ Objetivo:
 - Datos demostrativos persistentes.
 
 Incluye:
-- admin, 4 profesores, 12 estudiantes.
+- admin, 6 profesores y 25 estudiantes aleatorios.
 - cursos y temas base.
 - maximo de 4 aulas activas (`A1`, `A2`, `B1`, `B2`).
 - horarios confirmados/draft/closed.
@@ -253,11 +253,12 @@ Objetivo:
 - Generar dinamicamente una semana de cursos.
 
 Reglas generadas:
-- minimo 12 horarios semanales.
+- minimo 20 horarios semanales.
 - lunes a sabado.
 - 08:00-20:00.
 - duraciones de 60, 90, 120, 150 o 180 min.
 - sin cruces de aula/profesor.
+- incluye estados `draft`, `confirmed` y `closed`.
 - genera enrollments aleatorios.
 
 Mecanismo:

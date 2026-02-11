@@ -16,11 +16,13 @@ use ZipArchive;
 
 class ReportController extends Controller
 {
+    private const STATUS_FILTER_ACTIVE = 'active';
+
     public function index(Request $request): View
     {
-        $statusFilter = $request->query('status', ScheduleSlot::STATUS_CLOSED);
+        $statusFilter = $request->query('status', self::STATUS_FILTER_ACTIVE);
         if (! array_key_exists($statusFilter, $this->statusOptions())) {
-            $statusFilter = ScheduleSlot::STATUS_CLOSED;
+            $statusFilter = self::STATUS_FILTER_ACTIVE;
         }
 
         $activeScope = $request->query('week_scope', 'current');
@@ -50,7 +52,7 @@ class ReportController extends Controller
     {
         $validated = $request->validate([
             'week_scope' => ['required', 'string', 'in:current,next'],
-            'status' => ['required', 'string', 'in:all,draft,confirmed,closed'],
+            'status' => ['required', 'string', 'in:all,active,draft,confirmed,closed'],
             'format' => ['required', 'string', 'in:csv,xlsx,pdf'],
         ]);
 
@@ -82,6 +84,7 @@ class ReportController extends Controller
     private function statusOptions(): array
     {
         return [
+            self::STATUS_FILTER_ACTIVE => 'Activos (Borrador + Confirmado)',
             'all' => 'Todos',
             ScheduleSlot::STATUS_DRAFT => 'Borrador',
             ScheduleSlot::STATUS_CONFIRMED => 'Confirmado',
@@ -102,7 +105,9 @@ class ReportController extends Controller
             ->orderBy('day_of_week')
             ->orderBy('starts_at');
 
-        if ($statusFilter !== 'all') {
+        if ($statusFilter === self::STATUS_FILTER_ACTIVE) {
+            $query->whereIn('status', [ScheduleSlot::STATUS_DRAFT, ScheduleSlot::STATUS_CONFIRMED]);
+        } elseif ($statusFilter !== 'all') {
             $query->where('status', $statusFilter);
         }
 

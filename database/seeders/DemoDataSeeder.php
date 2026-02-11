@@ -9,6 +9,7 @@ use App\Models\Enrollment;
 use App\Models\ScheduleSlot;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Hash;
 
 class DemoDataSeeder extends Seeder
@@ -27,67 +28,8 @@ class DemoDataSeeder extends Seeder
         );
         $admin->syncRoles(['admin']);
 
-        $teacherA = User::firstOrCreate(
-            ['email' => 'profesor1@cursoingles.test'],
-            [
-                'name' => 'Prof. Maria Torres',
-                'password' => Hash::make('password'),
-            ],
-        );
-        $teacherA->syncRoles(['profesor']);
-
-        $teacherB = User::firstOrCreate(
-            ['email' => 'profesor2@cursoingles.test'],
-            [
-                'name' => 'Prof. Diego Ruiz',
-                'password' => Hash::make('password'),
-            ],
-        );
-        $teacherB->syncRoles(['profesor']);
-
-        $teacherC = User::firstOrCreate(
-            ['email' => 'profesor3@cursoingles.test'],
-            [
-                'name' => 'Prof. Laura Mendez',
-                'password' => Hash::make('password'),
-            ],
-        );
-        $teacherC->syncRoles(['profesor']);
-
-        $teacherD = User::firstOrCreate(
-            ['email' => 'profesor4@cursoingles.test'],
-            [
-                'name' => 'Prof. Andres Ibarra',
-                'password' => Hash::make('password'),
-            ],
-        );
-        $teacherD->syncRoles(['profesor']);
-
-        $students = collect([
-            ['name' => 'Ana Perez', 'email' => 'estudiante1@cursoingles.test'],
-            ['name' => 'Luis Gomez', 'email' => 'estudiante2@cursoingles.test'],
-            ['name' => 'Sofia Rojas', 'email' => 'estudiante3@cursoingles.test'],
-            ['name' => 'Mateo Diaz', 'email' => 'estudiante4@cursoingles.test'],
-            ['name' => 'Camila Vega', 'email' => 'estudiante5@cursoingles.test'],
-            ['name' => 'Daniel Paredes', 'email' => 'estudiante6@cursoingles.test'],
-            ['name' => 'Valeria Nunez', 'email' => 'estudiante7@cursoingles.test'],
-            ['name' => 'Jorge Molina', 'email' => 'estudiante8@cursoingles.test'],
-            ['name' => 'Paula Castro', 'email' => 'estudiante9@cursoingles.test'],
-            ['name' => 'Ricardo Salas', 'email' => 'estudiante10@cursoingles.test'],
-            ['name' => 'Elena Mora', 'email' => 'estudiante11@cursoingles.test'],
-            ['name' => 'Bruno Casas', 'email' => 'estudiante12@cursoingles.test'],
-        ])->map(function (array $studentData) {
-            $student = User::firstOrCreate(
-                ['email' => $studentData['email']],
-                [
-                    'name' => $studentData['name'],
-                    'password' => Hash::make('password'),
-                ],
-            );
-            $student->syncRoles(['estudiante']);
-
-            return $student;
-        });
+        $teachers = $this->seedTeachers();
+        $students = $this->seedStudents(25);
 
         $courseA1 = Course::updateOrCreate(
             ['code' => 'ING-A1'],
@@ -113,11 +55,27 @@ class DemoDataSeeder extends Seeder
                 'is_active' => true,
             ],
         );
+        $courseB2 = Course::updateOrCreate(
+            ['code' => 'ING-B2'],
+            [
+                'name' => 'Ingles B2',
+                'description' => 'Comunicacion avanzada con enfoque academico.',
+                'is_active' => true,
+            ],
+        );
         $courseConv = Course::updateOrCreate(
             ['code' => 'ING-CONV'],
             [
                 'name' => 'Ingles Conversacional',
                 'description' => 'Practica intensiva de speaking, debate y expresion fluida.',
+                'is_active' => true,
+            ],
+        );
+        $courseBusiness = Course::updateOrCreate(
+            ['code' => 'ING-BUS'],
+            [
+                'name' => 'Ingles de Negocios',
+                'description' => 'Comunicacion en entornos corporativos.',
                 'is_active' => true,
             ],
         );
@@ -138,13 +96,21 @@ class DemoDataSeeder extends Seeder
             ['course_id' => $courseB1->id, 'title' => 'Workplace Communication'],
             ['description' => 'Reuniones, correos y conversaciones profesionales.', 'is_active' => true],
         );
+        $topicPresentations = CourseTopic::updateOrCreate(
+            ['course_id' => $courseB2->id, 'title' => 'Professional Presentations'],
+            ['description' => 'Presentaciones de alto impacto en ingles.', 'is_active' => true],
+        );
         $topicDebate = CourseTopic::updateOrCreate(
             ['course_id' => $courseConv->id, 'title' => 'Debate and Fluency Drills'],
             ['description' => 'Argumentacion y velocidad de respuesta en speaking.', 'is_active' => true],
         );
+        $topicBusiness = CourseTopic::updateOrCreate(
+            ['course_id' => $courseBusiness->id, 'title' => 'Meetings and Negotiations'],
+            ['description' => 'Vocabulario practico para juntas y negociacion.', 'is_active' => true],
+        );
 
-        // El instituto opera con un maximo de 4 aulas activas.
         Classroom::query()->whereNotIn('code', ['A1', 'A2', 'B1', 'B2'])->update(['is_active' => false]);
+
         $classroomA1 = Classroom::updateOrCreate(
             ['code' => 'A1'],
             ['name' => 'Aula A1', 'location' => 'Primer piso', 'capacity' => 8, 'is_active' => true],
@@ -162,10 +128,9 @@ class DemoDataSeeder extends Seeder
             ['name' => 'Aula B2', 'location' => 'Segundo piso', 'capacity' => 8, 'is_active' => true],
         );
 
-        // Bloque simultaneo (mismo horario, distintas aulas).
         $slot1 = ScheduleSlot::updateOrCreate(
             [
-                'teacher_id' => $teacherA->id,
+                'teacher_id' => $teachers[0]->id,
                 'classroom_id' => $classroomA1->id,
                 'day_of_week' => 1,
                 'starts_at' => '08:00',
@@ -181,11 +146,11 @@ class DemoDataSeeder extends Seeder
 
         $slot2 = ScheduleSlot::updateOrCreate(
             [
-                'teacher_id' => $teacherB->id,
+                'teacher_id' => $teachers[1]->id,
                 'classroom_id' => $classroomA2->id,
                 'day_of_week' => 1,
-                'starts_at' => '08:00',
-                'ends_at' => '10:00',
+                'starts_at' => '10:00',
+                'ends_at' => '12:00',
             ],
             [
                 'course_topic_id' => $topicPast->id,
@@ -197,27 +162,27 @@ class DemoDataSeeder extends Seeder
 
         $slot3 = ScheduleSlot::updateOrCreate(
             [
-                'teacher_id' => $teacherC->id,
+                'teacher_id' => $teachers[2]->id,
                 'classroom_id' => $classroomB1->id,
-                'day_of_week' => 1,
-                'starts_at' => '08:00',
-                'ends_at' => '10:00',
+                'day_of_week' => 2,
+                'starts_at' => '14:00',
+                'ends_at' => '16:00',
             ],
             [
                 'course_topic_id' => $topicWork->id,
-                'status' => ScheduleSlot::STATUS_CONFIRMED,
-                'confirmed_at' => now()->subDays(3),
-                'notes' => 'Grupo B1 orientado al trabajo.',
+                'status' => ScheduleSlot::STATUS_DRAFT,
+                'confirmed_at' => null,
+                'notes' => 'Pendiente de confirmacion docente.',
             ],
         );
 
         $slot4 = ScheduleSlot::updateOrCreate(
             [
-                'teacher_id' => $teacherD->id,
+                'teacher_id' => $teachers[3]->id,
                 'classroom_id' => $classroomB2->id,
-                'day_of_week' => 1,
-                'starts_at' => '08:00',
-                'ends_at' => '10:00',
+                'day_of_week' => 3,
+                'starts_at' => '16:00',
+                'ends_at' => '18:00',
             ],
             [
                 'course_topic_id' => $topicDebate->id,
@@ -227,51 +192,51 @@ class DemoDataSeeder extends Seeder
             ],
         );
 
-        ScheduleSlot::updateOrCreate(
+        $slot5 = ScheduleSlot::updateOrCreate(
             [
-                'teacher_id' => $teacherA->id,
+                'teacher_id' => $teachers[4]->id,
                 'classroom_id' => $classroomA1->id,
-                'day_of_week' => 3,
-                'starts_at' => '14:00',
-                'ends_at' => '16:00',
+                'day_of_week' => 5,
+                'starts_at' => '09:00',
+                'ends_at' => '11:00',
             ],
             [
-                'course_topic_id' => $topicRoutines->id,
+                'course_topic_id' => $topicPresentations->id,
+                'status' => ScheduleSlot::STATUS_CLOSED,
+                'confirmed_at' => now()->subDays(10),
+                'notes' => 'Cohorte cerrada por cumplimiento de objetivos.',
+            ],
+        );
+
+        $slot6 = ScheduleSlot::updateOrCreate(
+            [
+                'teacher_id' => $teachers[5]->id,
+                'classroom_id' => $classroomA2->id,
+                'day_of_week' => 6,
+                'starts_at' => '11:00',
+                'ends_at' => '13:00',
+            ],
+            [
+                'course_topic_id' => $topicBusiness->id,
                 'status' => ScheduleSlot::STATUS_DRAFT,
                 'confirmed_at' => null,
-                'notes' => 'Pendiente de confirmacion docente.',
+                'notes' => 'Borrador sabatino para cierre de semana.',
             ],
         );
 
         ScheduleSlot::updateOrCreate(
             [
-                'teacher_id' => $teacherB->id,
-                'classroom_id' => $classroomA2->id,
+                'teacher_id' => $teachers[0]->id,
+                'classroom_id' => $classroomB2->id,
                 'day_of_week' => 4,
                 'starts_at' => '18:00',
                 'ends_at' => '20:00',
             ],
             [
-                'course_topic_id' => $topicPast->id,
+                'course_topic_id' => $topicRoutines->id,
                 'status' => ScheduleSlot::STATUS_CONFIRMED,
                 'confirmed_at' => now()->subDay(),
-                'notes' => 'Grupo nocturno A2.',
-            ],
-        );
-
-        ScheduleSlot::updateOrCreate(
-            [
-                'teacher_id' => $teacherC->id,
-                'classroom_id' => $classroomB1->id,
-                'day_of_week' => 6,
-                'starts_at' => '10:00',
-                'ends_at' => '12:00',
-            ],
-            [
-                'course_topic_id' => $topicWork->id,
-                'status' => ScheduleSlot::STATUS_CLOSED,
-                'confirmed_at' => now()->subDays(7),
-                'notes' => 'Cohorte finalizada.',
+                'notes' => 'Grupo nocturno A1.',
             ],
         );
 
@@ -304,15 +269,7 @@ class DemoDataSeeder extends Seeder
             ['created_by' => $admin->id],
         );
         Enrollment::firstOrCreate(
-            ['schedule_slot_id' => $slot3->id, 'student_id' => $students[2]->id],
-            ['created_by' => $admin->id],
-        );
-        Enrollment::firstOrCreate(
-            ['schedule_slot_id' => $slot3->id, 'student_id' => $students[3]->id],
-            ['created_by' => $admin->id],
-        );
-        Enrollment::firstOrCreate(
-            ['schedule_slot_id' => $slot3->id, 'student_id' => $students[7]->id],
+            ['schedule_slot_id' => $slot4->id, 'student_id' => $students[7]->id],
             ['created_by' => $admin->id],
         );
         Enrollment::firstOrCreate(
@@ -324,13 +281,71 @@ class DemoDataSeeder extends Seeder
             ['created_by' => $admin->id],
         );
         Enrollment::firstOrCreate(
-            ['schedule_slot_id' => $slot4->id, 'student_id' => $students[10]->id],
+            ['schedule_slot_id' => $slot5->id, 'student_id' => $students[10]->id],
             ['created_by' => $admin->id],
         );
         Enrollment::firstOrCreate(
-            ['schedule_slot_id' => $slot4->id, 'student_id' => $students[11]->id],
+            ['schedule_slot_id' => $slot5->id, 'student_id' => $students[11]->id],
+            ['created_by' => $admin->id],
+        );
+        Enrollment::firstOrCreate(
+            ['schedule_slot_id' => $slot6->id, 'student_id' => $students[12]->id],
+            ['created_by' => $admin->id],
+        );
+        Enrollment::firstOrCreate(
+            ['schedule_slot_id' => $slot3->id, 'student_id' => $students[13]->id],
             ['created_by' => $admin->id],
         );
     }
-}
 
+    /**
+     * @return Collection<int, User>
+     */
+    private function seedTeachers(): Collection
+    {
+        $teacherCatalog = [
+            ['name' => 'Msc. Wilson Sarmiento', 'email' => 'wilson.sarmiento@cursoingles.test'],
+            ['name' => 'Miss Mishel Medina', 'email' => 'mishel.medina@cursoingles.test'],
+            ['name' => 'Miss Ximena Bravo', 'email' => 'ximena.bravo@cursoingles.test'],
+            ['name' => 'Miss Pauleth Torres', 'email' => 'pauleth.torres@cursoingles.test'],
+            ['name' => 'Miss Fabiana Rivas', 'email' => 'fabiana.rivas@cursoingles.test'],
+            ['name' => 'Mr. Wilson Tello', 'email' => 'wilson.tello@cursoingles.test'],
+        ];
+
+        return collect($teacherCatalog)->map(function (array $teacherData): User {
+            $teacher = User::updateOrCreate(
+                ['email' => $teacherData['email']],
+                [
+                    'name' => $teacherData['name'],
+                    'password' => Hash::make('password'),
+                ],
+            );
+            $teacher->syncRoles(['profesor']);
+
+            return $teacher;
+        })->values();
+    }
+
+    /**
+     * @return Collection<int, User>
+     */
+    private function seedStudents(int $count): Collection
+    {
+        $students = collect(range(1, $count))->map(function (int $index): User {
+            $student = User::updateOrCreate(
+                ['email' => sprintf('estudiante%02d@cursoingles.test', $index)],
+                [
+                    'name' => fake()->unique()->name(),
+                    'password' => Hash::make('password'),
+                ],
+            );
+            $student->syncRoles(['estudiante']);
+
+            return $student;
+        });
+
+        fake()->unique(true);
+
+        return $students->values();
+    }
+}

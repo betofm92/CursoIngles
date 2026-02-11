@@ -10,7 +10,7 @@ Sistema web para gestion de cursos de ingles con control por roles:
 - Laravel 12
 - Laravel Breeze (auth)
 - Spatie Laravel Permission (roles/permisos)
-- SQLite
+- MySQL 8
 - Tailwind CSS (UI cards moderna)
 
 ## Reglas implementadas
@@ -43,9 +43,15 @@ cp .env.example .env
 # Windows (PowerShell)
 copy .env.example .env
 
-php artisan key:generate
 composer install
 npm install
+
+# Configura credenciales MySQL en .env y crea la base de datos:
+# DB_DATABASE=cursoingles
+# DB_USERNAME=cursoingles_app
+# DB_PASSWORD=...
+
+php artisan key:generate
 php artisan migrate:fresh --seed
 npm run build
 php artisan serve
@@ -62,10 +68,13 @@ npm run dev
 Contrasena para todos: `password`
 
 - Admin: `admin@cursoingles.test`
-- Profesor 1: `profesor1@cursoingles.test`
-- Profesor 2: `profesor2@cursoingles.test`
-- Estudiante 1: `estudiante1@cursoingles.test`
-- Estudiante 2: `estudiante2@cursoingles.test`
+- Profesor: `wilson.sarmiento@cursoingles.test`
+- Profesor: `mishel.medina@cursoingles.test`
+- Profesor: `ximena.bravo@cursoingles.test`
+- Profesor: `pauleth.torres@cursoingles.test`
+- Profesor: `fabiana.rivas@cursoingles.test`
+- Profesor: `wilson.tello@cursoingles.test`
+- Estudiantes aleatorios: `estudiante01@cursoingles.test` a `estudiante25@cursoingles.test`
 
 ## Rutas principales
 

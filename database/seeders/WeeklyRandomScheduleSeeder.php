@@ -19,6 +19,8 @@ class WeeklyRandomScheduleSeeder extends Seeder
 {
     private const NOTE_PREFIX = 'Seeder semanal aleatorio:';
 
+    private const TARGET_SLOTS = 20;
+
     /**
      * Run the database seeds.
      */
@@ -37,7 +39,7 @@ class WeeklyRandomScheduleSeeder extends Seeder
         $admin->syncRoles(['admin']);
 
         $teachers = $this->seedTeachers();
-        $students = $this->seedStudents();
+        $students = $this->seedStudents(25);
         $classrooms = $this->seedClassrooms();
         $courses = $this->seedCourses();
 
@@ -58,12 +60,12 @@ class WeeklyRandomScheduleSeeder extends Seeder
             ->delete();
 
         $weekStart = Carbon::now()->startOfWeek(Carbon::MONDAY);
-        $targetSlots = 12;
+        $statuses = $this->buildStatusPlan()->shuffle()->values();
         $created = collect();
         $attempts = 0;
-        $maxAttempts = 900;
+        $maxAttempts = 3000;
 
-        while ($created->count() < $targetSlots && $attempts < $maxAttempts) {
+        while ($created->count() < self::TARGET_SLOTS && $attempts < $maxAttempts) {
             $attempts++;
 
             $dayOfWeek = random_int(1, 6);
@@ -94,7 +96,6 @@ class WeeklyRandomScheduleSeeder extends Seeder
 
             $hasConflict = ScheduleSlot::query()
                 ->where('day_of_week', $dayOfWeek)
-                ->where('status', '!=', ScheduleSlot::STATUS_CLOSED)
                 ->where('starts_at', '<', $endsAt)
                 ->where('ends_at', '>', $startsAt)
                 ->where(function ($query) use ($teacherId, $classroomId): void {
@@ -107,7 +108,22 @@ class WeeklyRandomScheduleSeeder extends Seeder
                 continue;
             }
 
+            $status = (string) $statuses[$created->count()];
             $slotDate = $weekStart->copy()->addDays($dayOfWeek - 1);
+
+            $confirmedAt = match ($status) {
+                ScheduleSlot::STATUS_DRAFT => null,
+                ScheduleSlot::STATUS_CONFIRMED => $slotDate->copy()->setTime(
+                    intdiv($startsAtMinutes, 60),
+                    $startsAtMinutes % 60
+                ),
+                ScheduleSlot::STATUS_CLOSED => $slotDate->copy()->setTime(
+                    intdiv($endsAtMinutes, 60),
+                    $endsAtMinutes % 60
+                ),
+                default => null,
+            };
+
             $created[] = ScheduleSlot::create([
                 'teacher_id' => $teacherId,
                 'classroom_id' => $classroomId,
@@ -115,32 +131,68 @@ class WeeklyRandomScheduleSeeder extends Seeder
                 'day_of_week' => $dayOfWeek,
                 'starts_at' => $startsAt,
                 'ends_at' => $endsAt,
-                'status' => ScheduleSlot::STATUS_CONFIRMED,
-                'confirmed_at' => $slotDate->copy()->setTime(
-                    intdiv($startsAtMinutes, 60),
-                    $startsAtMinutes % 60
-                ),
+                'status' => $status,
+                'confirmed_at' => $confirmedAt,
                 'notes' => self::NOTE_PREFIX.$weekSeed,
             ]);
         }
 
-        if ($created->count() < $targetSlots) {
+        if ($created->count() < self::TARGET_SLOTS) {
             throw new RuntimeException('No se pudo generar la cantidad minima de cursos semanales aleatorios.');
         }
 
         foreach ($created as $slot) {
-            $maxAssignable = min(8, $students->count());
-            $assignedCount = random_int(2, $maxAssignable);
-            $assignedStudents = $students->shuffle()->take($assignedCount);
+            if ($slot->status === ScheduleSlot::STATUS_DRAFT) {
+                continue;
+            }
 
-            foreach ($assignedStudents as $student) {
-                Enrollment::create([
+            $maxAssignable = min(8, $students->count());
+            $targetAssigned = random_int(2, $maxAssignable);
+            $assigned = 0;
+
+            foreach ($students->shuffle() as $student) {
+                if ($assigned >= $targetAssigned) {
+                    break;
+                }
+
+                if ($this->studentHasOverlap($student, $slot)) {
+                    continue;
+                }
+
+                Enrollment::firstOrCreate([
                     'schedule_slot_id' => $slot->id,
                     'student_id' => $student->id,
+                ], [
                     'created_by' => $admin->id,
                 ]);
+
+                $assigned++;
             }
         }
+    }
+
+    /**
+     * @return Collection<int, string>
+     */
+    private function buildStatusPlan(): Collection
+    {
+        return collect([
+            ...array_fill(0, 7, ScheduleSlot::STATUS_DRAFT),
+            ...array_fill(0, 8, ScheduleSlot::STATUS_CONFIRMED),
+            ...array_fill(0, 5, ScheduleSlot::STATUS_CLOSED),
+        ]);
+    }
+
+    private function studentHasOverlap(User $student, ScheduleSlot $slot): bool
+    {
+        return ScheduleSlot::query()
+            ->join('enrollments', 'enrollments.schedule_slot_id', '=', 'schedule_slots.id')
+            ->where('enrollments.student_id', $student->id)
+            ->where('schedule_slots.day_of_week', $slot->day_of_week)
+            ->where('schedule_slots.starts_at', '<', $slot->ends_at)
+            ->where('schedule_slots.ends_at', '>', $slot->starts_at)
+            ->whereIn('schedule_slots.status', [ScheduleSlot::STATUS_CONFIRMED, ScheduleSlot::STATUS_CLOSED])
+            ->exists();
     }
 
     /**
@@ -148,13 +200,17 @@ class WeeklyRandomScheduleSeeder extends Seeder
      */
     private function seedTeachers(): Collection
     {
-        return collect([
-            ['name' => 'Prof. Camila Soto', 'email' => 'teacher.random.1@cursoingles.test'],
-            ['name' => 'Prof. Bruno Leon', 'email' => 'teacher.random.2@cursoingles.test'],
-            ['name' => 'Prof. Valentina Rios', 'email' => 'teacher.random.3@cursoingles.test'],
-            ['name' => 'Prof. Marcos Arias', 'email' => 'teacher.random.4@cursoingles.test'],
-        ])->map(function (array $teacherData) {
-            $teacher = User::firstOrCreate(
+        $teacherCatalog = [
+            ['name' => 'Msc. Wilson Sarmiento', 'email' => 'wilson.sarmiento@cursoingles.test'],
+            ['name' => 'Miss Mishel Medina', 'email' => 'mishel.medina@cursoingles.test'],
+            ['name' => 'Miss Ximena Bravo', 'email' => 'ximena.bravo@cursoingles.test'],
+            ['name' => 'Miss Pauleth Torres', 'email' => 'pauleth.torres@cursoingles.test'],
+            ['name' => 'Miss Fabiana Rivas', 'email' => 'fabiana.rivas@cursoingles.test'],
+            ['name' => 'Mr. Wilson Tello', 'email' => 'wilson.tello@cursoingles.test'],
+        ];
+
+        return collect($teacherCatalog)->map(function (array $teacherData): User {
+            $teacher = User::updateOrCreate(
                 ['email' => $teacherData['email']],
                 [
                     'name' => $teacherData['name'],
@@ -164,19 +220,19 @@ class WeeklyRandomScheduleSeeder extends Seeder
             $teacher->syncRoles(['profesor']);
 
             return $teacher;
-        });
+        })->values();
     }
 
     /**
      * @return Collection<int, User>
      */
-    private function seedStudents(): Collection
+    private function seedStudents(int $count): Collection
     {
-        $students = collect(range(1, 24))->map(function (int $index): User {
-            $student = User::firstOrCreate(
-                ['email' => sprintf('student.random.%d@cursoingles.test', $index)],
+        $students = collect(range(1, $count))->map(function (int $index): User {
+            $student = User::updateOrCreate(
+                ['email' => sprintf('estudiante%02d@cursoingles.test', $index)],
                 [
-                    'name' => sprintf('Estudiante Random %d', $index),
+                    'name' => fake()->unique()->name(),
                     'password' => Hash::make('password'),
                 ],
             );
@@ -184,6 +240,8 @@ class WeeklyRandomScheduleSeeder extends Seeder
 
             return $student;
         });
+
+        fake()->unique(true);
 
         return $students->values();
     }
@@ -227,6 +285,8 @@ class WeeklyRandomScheduleSeeder extends Seeder
             ['code' => 'WEEK-BUS', 'name' => 'Ingles de Negocios', 'topic' => 'Meetings and Negotiations'],
             ['code' => 'WEEK-GRAM', 'name' => 'Gramatica Aplicada', 'topic' => 'Grammar in Context'],
             ['code' => 'WEEK-EXAM', 'name' => 'Preparacion de Examen', 'topic' => 'Exam Strategies'],
+            ['code' => 'WEEK-PRON', 'name' => 'Pronunciacion Intensiva', 'topic' => 'Pronunciation Accuracy'],
+            ['code' => 'WEEK-READ', 'name' => 'Reading Club', 'topic' => 'Critical Reading Skills'],
         ];
 
         return collect($catalog)->map(function (array $courseData): Course {
@@ -253,4 +313,3 @@ class WeeklyRandomScheduleSeeder extends Seeder
         return sprintf('%02d:%02d', intdiv($minutes, 60), $minutes % 60);
     }
 }
-

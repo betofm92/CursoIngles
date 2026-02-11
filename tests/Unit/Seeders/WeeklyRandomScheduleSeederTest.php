@@ -4,6 +4,7 @@ namespace Tests\Unit\Seeders;
 
 use App\Models\Classroom;
 use App\Models\ScheduleSlot;
+use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Database\Seeders\WeeklyRandomScheduleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -29,7 +30,7 @@ class WeeklyRandomScheduleSeederTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_seeder_creates_at_least_twelve_weekly_courses_with_valid_duration_and_window(): void
+    public function test_seeder_creates_at_least_twenty_weekly_courses_with_all_statuses_and_valid_duration(): void
     {
         $this->seed(WeeklyRandomScheduleSeeder::class);
 
@@ -37,8 +38,11 @@ class WeeklyRandomScheduleSeederTest extends TestCase
             ->where('notes', 'like', 'Seeder semanal aleatorio:%')
             ->get();
 
-        $this->assertGreaterThanOrEqual(12, $weeklySlots->count());
+        $this->assertGreaterThanOrEqual(20, $weeklySlots->count());
         $this->assertLessThanOrEqual(4, Classroom::query()->where('is_active', true)->count());
+        $this->assertTrue($weeklySlots->contains('status', ScheduleSlot::STATUS_DRAFT));
+        $this->assertTrue($weeklySlots->contains('status', ScheduleSlot::STATUS_CONFIRMED));
+        $this->assertTrue($weeklySlots->contains('status', ScheduleSlot::STATUS_CLOSED));
 
         foreach ($weeklySlots as $slot) {
             $startMinutes = $this->toMinutes((string) $slot->starts_at);
@@ -52,6 +56,30 @@ class WeeklyRandomScheduleSeederTest extends TestCase
             $this->assertGreaterThan(0, $duration);
             $this->assertLessThanOrEqual(180, $duration);
         }
+    }
+
+    public function test_seeder_uses_requested_teacher_names_and_creates_at_least_twenty_five_students(): void
+    {
+        $this->seed(WeeklyRandomScheduleSeeder::class);
+
+        $expectedTeacherNames = [
+            'Msc. Wilson Sarmiento',
+            'Miss Mishel Medina',
+            'Miss Ximena Bravo',
+            'Miss Pauleth Torres',
+            'Miss Fabiana Rivas',
+            'Mr. Wilson Tello',
+        ];
+
+        $teacherNames = User::role('profesor')
+            ->pluck('name')
+            ->all();
+
+        sort($teacherNames);
+        sort($expectedTeacherNames);
+
+        $this->assertSame($expectedTeacherNames, $teacherNames);
+        $this->assertGreaterThanOrEqual(25, User::role('estudiante')->count());
     }
 
     public function test_seeder_does_not_create_teacher_or_classroom_time_overlaps(): void
